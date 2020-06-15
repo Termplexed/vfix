@@ -666,7 +666,7 @@ fun! s:Vfix.boot()
 	let self.strapped = v:true
 	" Set options from optional global configurations
 	for k in keys(s:cnf_default)
-		let self.cnf[k] = get(g:, 'Vfix_' . k, s:cnf_default[k])
+		let self.cnf[k] = get(g:, 'Vfix_' . k, self.cnf[k])
 	endfor
 endfun
 
