@@ -45,7 +45,7 @@ Adds one command: `:Vfix`
 
 ## :books:&nbsp;&nbsp;&nbsp;Usage
 
-The script comes with a few options. When script is sourced you can run:
+The script comes with a few options. When Vfix has been sourced you can run:
 
 ```vim
 :Vfix help
@@ -66,7 +66,7 @@ Options:
   h  : This help
 ```
 
-Beware that `cc` and `ac` clears `:messages`. To view status of flags use `:Vfix sf`
+Beware that `cc` and `ac` erase `:messages`. To view status of flags use `:Vfix sf`
 
 **:Vfix** alone runs the script and open QuickFix if it managed to dechipher any errors - optionally with `cc`, `a`, `s`, `o` or `r` option(s).
 
@@ -78,23 +78,45 @@ Note that every time a script get sourced it get a new reference. If this is anu
 
 Override on options can be set in .vimrc (or elsewhere). All takes `1` for on and `0` for off.
 ```vim
-g:Vfix_append         " Append to QuickFix error list
-g:Vfix_copen          " Use copen
-g:Vfix_silent         " Never open window
-g:Vfix_reverse        " Reverse messages / errors LIFO
-g:Vfix_ignore_lost    " Ignore errors where functions can not be resolved
-g:Vfix_clr_always     " Clear :messages each time Vfix is executed
-g:Vfix_auto_run       " Auto run on sourcing. Can be buggy.
+" Option        Default
+g:Vfix_append         0 " Append to QuickFix error list. Else replace.
+g:Vfix_copen          0 " Use copen. Else cwindow.
+g:Vfix_silent         0 " Never open window.
+g:Vfix_reverse        1 " Reverse messages / errors LIFO. Main reson for this is
+                        " when one have a lot of `:messages`. Would perhaps be
+                        " better to jump to end of error list.
+g:Vfix_ignore_lost    0 " Ignore errors where functions can not be resolved. See
+                        " note below.
+g:Vfix_clr_always     0 " Clear :messages each time Vfix is executed
+g:Vfix_auto_run       0 " Auto run on sourcing. Can be buggy.
 
-g:Vfix_re_source_globals
+g:Vfix_re_source_globals  0
 " Mainly for hacking this script.
 " If set and true global options will be reset when re-sourcing script.
 ```
-##  :mega:&nbsp;&nbsp;&nbsp;Note
+##  :mega:&nbsp;&nbsp;&nbsp;Notes
 
 As it read the files where errors originated each file with errors will be added to the hidden buflist. (`ls!`).
 
 Have a solution using `head` at least on OS with this program. Patch later.
+
+- [ ] Add option to use shell command to read script files.
+- [ ] Consider jumping to end of error list instead of reversing.
+- [ ] Sorting is a mess when one have mixed messages: One can typically have an
+error reference in `:messages` followed by one *or more*  error messages. This script is
+greedy when reading errors after an error with reported location - resulting in
+a skewed reporting when it comes to *called by* references. So - work on this.
+- [ ] Better autocommand handling.
+- [ ] It is possible to cache references to *all* objects and functions each
+time a script is sourced by looping `s:`, `g:` etc. Could have it as an option,
+but likely best suited as an addon. Is a bit complex and usually not worth it.
+- [ ] Find a way to set a a *mark* in `:messages` if user reloads a script they
+are working on. Could likely use autocommand in combination with `:silent echom`
+This way one could ignore lost messages better.
+- [ ] As we read the files where errors originated and also get context - a few
+lines before / after - one could try to implement a way to show this. Popup?
+For example a popup while navigating QuickFix list.
+
 
 ##  :curly_loop:&nbsp;&nbsp;&nbsp;History
 
