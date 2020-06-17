@@ -100,13 +100,18 @@ As it read the files where errors originated each file with errors will be added
 
 Have a solution using `head` at least on OS with this program. Patch later.
 
-- [ ] Add option to use shell command to read script files.
+- [ ] Add option to use shell command to read script files. Each time we read a
+file, even though it is with `readfile()`, the file is pushed to the hidden
+buflist. This can be a bit noisy.
 - [ ] Consider jumping to end of error list instead of reversing.
 - [ ] Sorting is a mess when one have mixed messages: One can typically have an
-error reference in `:messages` followed by one *or more*  error messages. This script is
-greedy when reading errors after an error with reported location - resulting in
-a skewed reporting when it comes to *called by* references. So - work on this.
+error reference in `:messages` followed by one *or more*  error messages. This
+script is greedy when reading errors after an error with reported location -
+resulting in a skewed reporting when it comes to *called by* references. So - w
+ork on this.
 - [ ] Better autocommand handling.
+- [ ] More specific about that -^ point so it is actually possible to check off.
+:sweat_smile:
 - [ ] It is possible to cache references to *all* objects and functions each
 time a script is sourced by looping `s:`, `g:` etc. Could have it as an option,
 but likely best suited as an addon. Is a bit complex and usually not worth it.
@@ -115,9 +120,12 @@ are working on. Could likely use autocommand in combination with `:silent echom`
 This way one could ignore lost messages better.
 - [ ] As we read the files where errors originated and also get context - a few
 lines before / after - one could try to implement a way to show this. Popup?
-For example a popup while navigating QuickFix list.
-
+For example a popup while navigating QuickFix list. Could be useful for when one
+do not want to open the file - or the file is open in another vim session.
+- [ ] Look up error number in `:help`? Each `:message` is prepended with an error
+in the form of `ENNN`. Could add a link to this, - but have not found it useful.
+- [ ] Add a plain-text README?
 
 ##  :curly_loop:&nbsp;&nbsp;&nbsp;History
 
-Is a snip that has been in my .vim directory for years, adding a little now and then. Likely a lot of bugs, ironically enough. Did some cleanup on the code and have likley introduced a few more. But put it out there in case anyone find it helpful.
+Is a snip that has been in my .vim directory for years, adding a little now and then. Likely a lot of bugs, ironically enough. Did some cleanup on the code and have likely introduced a few more. But put it out there in case anyone find it helpful.
