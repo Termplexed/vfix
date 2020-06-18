@@ -483,9 +483,9 @@ let s:VfixHelp = [
 	\ ['ignore_lost',  'ig', 'nolost  - Ignore lost functions.   Default OFF'],
 	\ ['auto_run',     'au', 'autorun - Vfix on sourcing a file. Default OFF'],
 	\ ['clr_always',   'ac', 'clear   - Alway clear ":messages". Default OFF'],
-	\ [v:null,         'cc', 'clear   - Clear messages once.'],
-	\ [v:null,         'sf', 'Print Status for flags.'],
-	\ [v:null,          'h', 'This help']
+	\ ['0',            'cc', 'clear   - Clear messages once.'],
+	\ ['0',            'sf', 'Print Status for flags.'],
+	\ ['0',             'h', 'This help']
 \ ] " }}}
 
 " F s:Vfix.echo_flag(h)                      Helper for - Echo flags status {{{2
@@ -500,7 +500,7 @@ endfun " }}}
 fun! s:Vfix.show_flags_state()
 	echo
 	for h in s:VfixHelp
-		if h[0] != v:null
+		if h[0] != '0'
 			call self.echo_flag(h)
 		endif
 	endfor
@@ -512,8 +512,11 @@ fun! s:Vfix.flip_option(k)
 	echo "State " . a:k . ": " . self.cnf[a:k]
 endfun " }}}
 
-" F s:Vfix.str2bool(s)                                    String to boolean {{{2
-fun! s:Vfix.str2bool(v)
+" F s:Vfix.val2bool(s)                                    String to boolean {{{2
+fun! s:Vfix.val2bool(v)
+	if type(a:v) == type(1)
+		return a:v ? 1 : 0
+	endif
 	let v = tolower(a:v)
 	if ['+', 'y', 'true']->index(v) > -1
 		return 1
@@ -526,10 +529,10 @@ endfun " }}}
 
 " F s:Vfix.set_option(k, v)                                       Set flags {{{2
 fun! s:Vfix.set_option(k, v)
-	if a:v == v:null
+	if a:v == 0
 		call self.flip_option(a:k)
 	else
-		let self.cnf[a:k] = self.str2bool(a:v)
+		let self.cnf[a:k] = a:v
 		echo "State " . a:k . ": " . self.cnf[a:k]
 	endif
 endfun " }}}
@@ -562,9 +565,9 @@ fun! s:Vfix.set_opts(n, opts)
 		if opt =~ '[:=]'
 			let v = split(opt, '[:=]')
 			let opt = v[0]
-			let val = v[1]
+			let val = self.val2bool(v[1])
 		else
-			let val = v:null
+			let val = 0
 		endif
 
 		if     opt == 'cc'
@@ -676,7 +679,7 @@ fun! s:Vfix.boot()
 	if exists('s:cnf_bak')
 		call extend(s:Vfix.cnf, s:cnf_bak)
 		let self.strapped =
-			\ self.cnf.re_source_globals ? v:false : v:true
+			\ self.cnf.re_source_globals ? 0 : 1
 		call self.autocmd_set(1)
 		unlet s:cnf_bak
 	endif
@@ -684,10 +687,10 @@ fun! s:Vfix.boot()
 	" XXX Do not run this if re-sourcing THIS file and
 	"     re_source_globals != true
 	if ! self.strapped
-		let self.strapped = v:true
+		let self.strapped = 1
 		" Set options from optional global configurations
 		for k in keys(s:cnf_default)
-			let self.cnf[k] = get(g:, 'Vfix_' . k, self.cnf[k])
+			let self.cnf[k] = self.val2bool(get(g:, 'Vfix_' . k, self.cnf[k]))
 		endfor
 	endif
 
