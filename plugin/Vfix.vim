@@ -24,9 +24,9 @@ if exists('s:Vfix.cnf')
 	let s:cnf_bak = copy(s:Vfix.cnf)
 endif
 
-let s:Vfix = #{
-	\ strapped: 0,
-	\ cnf: { }
+let s:Vfix = {
+	\ 'strapped': 0,
+	\ 'cnf': { }
 \}
 
 " }}}
@@ -34,22 +34,22 @@ let s:Vfix = #{
 " All values can be overridden globally by:
 " 	g:Vfix_{config name} = {config setting}
 "
-let s:cnf_default = #{
-	\ re_source_globals: 0,
-	\ append: 0,
-	\ copen: 0,
-	\ silent: 0,
-	\ reverse: 1,
-	\ clr_once: 0,
-	\ ignore_lost: 0,
-	\ clr_always: 0,
-	\ auto_run: 0
+let s:cnf_default = {
+	\ 're_source_globals': 0,
+	\ 'append': 0,
+	\ 'copen': 0,
+	\ 'silent': 0,
+	\ 'reverse': 1,
+	\ 'clr_once': 0,
+	\ 'ignore_lost': 0,
+	\ 'clr_always': 0,
+	\ 'auto_run': 0
 \}
 " }}}
 
 " F s:Vfix.warn()                                      Echo warning message {{{1
 "
-fun! s:Vfix.warn(s, persistent = 0)
+fun! s:Vfix.warn(s, persistent)
 	echohl WarningMsg
 	if a:persistent
 		echom a:s
@@ -79,7 +79,7 @@ fun! s:Vfix.file2buf(fn)
 			let buf = readfile(a:fn)
 			let s:file_cache[a:fn] = buf
 		catch
-			call self.warn('Vfix: Unable to read ' . a:fn)
+			call self.warn('Vfix: Unable to read ' . a:fn, 0)
 			let buf = []
 		endtry
 	endif
@@ -172,9 +172,9 @@ endfun " }}}
 " 'messages' line typically is:
 " Some error fun[3]...fun[8]...fun:
 " where numbers in brackets are offset within funciton.
-let s:Vfix.ml_trace = #{
-	\ edict: '^\([0-9]\+\)\[\([0-9]\+\)\]$',
-	\ elfun: '^\([^[]\+\)\[\([0-9]\+\)\]$'
+let s:Vfix.ml_trace = {
+	\ 'edict': '^\([0-9]\+\)\[\([0-9]\+\)\]$',
+	\ 'elfun': '^\([^[]\+\)\[\([0-9]\+\)\]$'
 \} " }}}
 " F s:Vfix.create_entry(type, ref, ln)                 Create a stack entry {{{1
 " Processing single entry from a trace: EEE[offs]...EEE[offs]...EEE
@@ -189,13 +189,13 @@ let s:Vfix.ml_trace = #{
 "       not exist :P
 fun! s:Vfix.create_entry(type, ref, ln)
 	let m = matchlist(a:ref, self.ml_trace[a:type])
-	let entry = #{
-		\ file  : '',
-		\ ref   : get(m, 1, a:ref),
-		\ fun   : 'N/A',
-		\ fline : 0,
-		\ offs  : a:ln + get(m, 2, ''),
-		\ ctx   : ''
+	let entry = {
+		\ 'file'  : '',
+		\ 'ref'   : get(m, 1, a:ref),
+		\ 'fun'   : 'N/A',
+		\ 'fline' : 0,
+		\ 'offs'  : a:ln + get(m, 2, ''),
+		\ 'ctx'   : ''
 	\}
 	call self.resolve_ref_verbose(entry, a:type)
 	return entry
@@ -246,11 +246,11 @@ fun! s:Vfix.push_err_global(fn) abort
 	let errors = self.get_errors('efile')
 	let buf = self.file2buf(fn)
 	if len(buf)
-		let errors.stack += [#{
-			\ file  : fn,
-			\ ref   : '',
-			\ fun   : '<inline>',
-			\ fline : ''
+		let errors.stack += [{
+			\ 'file'  : fn,
+			\ 'ref'   : '',
+			\ 'fun'   : '<inline>',
+			\ 'fline' : ''
 		\}]
 		for err in errors.err_list
 			let err.ctx = self.ctx_from_buf(buf, err.line - 1)
@@ -269,11 +269,11 @@ endfun " }}}
 " type: eref
 fun! s:Vfix.push_err_unscoped(type) abort
 	let errors = self.get_errors(a:type, self.ix)
-	let errors.stack += [#{
-		\ file  : '',
-		\ ref   : 'N/A',
-		\ fun   : '<unscoped>',
-		\ fline : 1
+	let errors.stack += [{
+		\ 'file'  : '',
+		\ 'ref'   : 'N/A',
+		\ 'fun'   : '<unscoped>',
+		\ 'fline' : 1
 	\}]
 	let self.reflist += [errors]
 	let self.ix += errors.log_len ? errors.log_len : 1
@@ -330,27 +330,27 @@ fun! s:Vfix.get_errors(type, ...) abort
 			elseif e[1] != ''
 				let line = e[1]
 			elseif e[2] != ''
-				let err += [#{line: line, nr: 0, txt: "Interrupted", ctx: 'N/A'}] ", xx: e}]
+				let err += [{'line': line, 'nr': 0, 'txt': "Interrupted", 'ctx': 'N/A'}] ", xx: e}]
 			elseif e[3] != ''
 				" TODO: Add entry for resolved function in message
 				" Trigger by for example: call Some_fun() where Some_fun()
 				" require arguments.
 				" XXX: Partially done, but should likely be refactored.
 				let txt = self.resolve_msg(e[4])
-				let err += [#{line: line, nr: e[3], txt: txt, ctx: 'N/A'}] ", xx: e}]
+				let err += [{'line': line, 'nr': e[3], 'txt': txt, 'ctx': 'N/A'}] ", xx: e}]
 			endif
 		endif
 		let i += 1
 	endwhile
-	return #{
-		\ type      : a:type,
-		\ trigger   : self.messages[self.ix],
-		\ err_list  : err,
-		\ last_eline: line,
-		\ log_start : self.ix,
-		\ log_end   : i,
-		\ log_len   : i - self.ix,
-		\ stack     : []
+	return {
+		\ 'type'      : a:type,
+		\ 'trigger'   : self.messages[self.ix],
+		\ 'err_list'  : err,
+		\ 'last_eline': line,
+		\ 'log_start' : self.ix,
+		\ 'log_end'   : i,
+		\ 'log_len'   : i - self.ix,
+		\ 'stack'     : []
 	\}
 endfun " }}}
 
@@ -444,28 +444,28 @@ fun! s:Vfix.update_quickfix()
 		" Add reported errors for this entry
 		for err in entry.err_list
 			"main.fline + main.eline + main.offs,
-			let e += [#{
-				\ filename  : main.file,
-				\ lnum      : err.line + main.fline,
-				\ nr        : err.nr,
-				\ col       : 0,
-				\ vcol      : 0,
-				\ text      : main.fun . ': ' . err.txt,
-				\ type      : 'E',
-				\ valid     : main.fun != 'N/A'
+			let e += [{
+				\ 'filename'  : main.file,
+				\ 'lnum'      : err.line + main.fline,
+				\ 'nr'        : err.nr,
+				\ 'col'       : 0,
+				\ 'vcol'      : 0,
+				\ 'text'      : main.fun . ': ' . err.txt,
+				\ 'type'      : 'E',
+				\ 'valid'     : main.fun != 'N/A'
 			\}]
 		endfor
 		" Add stack trace as Info entries
 		for se in entry.stack[1:]
-			let e += [#{
-				\ filename  : se.file,
-				\ lnum      : se.fline + se.offs,
-				\ nr        : 0,
-				\ col       : 0,
-				\ vcol      : 0,
-				\ text      : 'Called by: ' . se.fun,
-				\ type      : 'I',
-				\ valid     : 0
+			let e += [{
+				\ 'filename'  : se.file,
+				\ 'lnum'      : se.fline + se.offs,
+				\ 'nr'        : 0,
+				\ 'col'       : 0,
+				\ 'vcol'      : 0,
+				\ 'text'      : 'Called by: ' . se.fun,
+				\ 'type'      : 'I',
+				\ 'valid'     : 0
 			\}]
 		endfor
 	endfor
@@ -582,11 +582,11 @@ fun! s:Vfix.set_opts(n, opts)
 			let r = 1
 		elseif opt == 'ac'
 			call self.set_option('clr_always', val)
-			call self.autocmd_set()
+			call self.autocmd_set(0)
 			let r = 1
 		elseif opt == 'au'
 			call self.set_option('auto_run', val)
-			call self.autocmd_set()
+			call self.autocmd_set(0)
 			let r = 1
 		elseif opt == 'sf'
 			call self.show_flags_state()
@@ -653,7 +653,7 @@ fun! s:Vfix.run(...)
 	let self.messages = []
 endfun " }}}
 " F s:Vfix.autocmd_set()                           Set / Remove autocommand {{{1
-fun! s:Vfix.autocmd_set(clear = 0)
+fun! s:Vfix.autocmd_set(clear)
 	if self.cnf.auto_run && !a:clear
 		augroup VfixAurunAfterSourcing
 			autocmd!
@@ -692,7 +692,7 @@ fun! s:Vfix.boot()
 	endif
 
 	call self.def_commands()
-	call self.autocmd_set()
+	call self.autocmd_set(0)
 endfun
 
 "   Startup                                             Set up delayed boot {{{1
