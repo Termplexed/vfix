@@ -644,6 +644,10 @@ fun! s:Vfix.run(...)
 		messages clear
 		let self.cnf.clr_once = 0
 	endif
+
+	" Cleanup - Not needed anymore.
+	let self.reflist = []
+	let self.messages = []
 endfun " }}}
 " F s:Vfix.autocmd_set()                           Set / Remove autocommand {{{1
 fun! s:Vfix.autocmd_set(clear = 0)
