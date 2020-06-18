@@ -603,6 +603,9 @@ endfun " }}}
 " F s:Vfix.run(...)                                                    Main {{{1
 "
 fun! s:Vfix.run(...)
+	if ! self.strapped
+		call self.boot()
+	endif
 	" Parse options
 	if self.set_opts(a:0, a:000)
 		return 1
@@ -675,26 +678,31 @@ fun! s:Vfix.boot()
 		let self.strapped =
 			\ self.cnf.re_source_globals ? v:false : v:true
 		call self.autocmd_set(1)
+		unlet s:cnf_bak
+	endif
+
+	" XXX Do not run this if re-sourcing THIS file and
+	"     re_source_globals != true
+	if ! self.strapped
+		let self.strapped = v:true
+		" Set options from optional global configurations
+		for k in keys(s:cnf_default)
+			let self.cnf[k] = get(g:, 'Vfix_' . k, self.cnf[k])
+		endfor
 	endif
 
 	call self.def_commands()
-
 	call self.autocmd_set()
-
-	" XXX Abort bootload here if this is a re-sourcing and
-	"     re_source_globals != true
-	if self.strapped
-		return
-	endif
-
-	let self.strapped = v:true
-	" Set options from optional global configurations
-	for k in keys(s:cnf_default)
-		let self.cnf[k] = get(g:, 'Vfix_' . k, self.cnf[k])
-	endfor
 endfun
 
-call s:Vfix.boot()
+"   Startup                                             Set up delayed boot {{{1
+" If g:Vfix_load_on_startup is set  to a truth value boot now.
+" Else boot on first call by :Vfix
+if get(g:, 'Vfix_load_on_startup', '0') != '0'
+	call s:Vfix.boot()
+endif
+" But we need to set up the command ...
+call s:Vfix.def_commands()
 
 let &cpo= s:keepcpo
 unlet s:keepcpo

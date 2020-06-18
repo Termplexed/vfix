@@ -90,19 +90,19 @@ g:Vfix_ignore_lost    0 " Ignore errors where functions can not be resolved. See
 g:Vfix_clr_always     0 " Clear :messages each time Vfix is executed
 g:Vfix_auto_run       0 " Auto run on sourcing. Can be buggy.
 
-g:Vfix_re_source_globals  0
-" Mainly for hacking this script.
-" If set and true global options will be reset when re-sourcing script.
+g:Vfix_load_on_startup    0 " The boot() section of the code will be run first
+                            " time :Vfix is called. Set this to 1 to boot()
+			    " when vim source the script. Mainly for hacking.
+g:Vfix_re_source_globals  0 " Mainly for hacking ***this*** script.
+                            " If set and true global options will be reset when
+			    " re-sourcing script.
 ```
 ##  :mega:&nbsp;&nbsp;&nbsp;Notes
 
-As it read the files where errors originated each file with errors will be added to the hidden buflist. (`ls!`).
-
-Have a solution using `head` at least on OS with this program. Patch later.
-
-- [ ] Add option to use shell command to read script files. Each time we read a
+- ~~[ ] Add option to use shell command to read script files. Each time we read a
 file, even though it is with `readfile()`, the file is pushed to the hidden
-buflist. This can be a bit noisy.
+buflist. This can be a bit noisy.~~ Files are added when updating Quickfix so
+this is not an option.
 - [ ] Consider jumping to end of error list instead of reversing.
 - [ ] Sorting is a mess when one have mixed messages: One can typically have an
 error reference in `:messages` followed by one *or more*  error messages. This
