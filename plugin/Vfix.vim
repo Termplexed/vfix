@@ -47,6 +47,17 @@ let s:cnf_default = #{
 \}
 " }}}
 
+" F s:Vfix.warn()                                      Echo warning message {{{1
+"
+fun! s:Vfix.warn(s, persistent = 0)
+	echohl WarningMsg
+	if a:persistent
+		echom a:s
+	else
+		echo a:s
+	endif
+	echohl None
+endfun " }}}
 " F s:Vfix.set_messagelist()                              Read all messages {{{1
 " Out: self.messages    list
 fun! s:Vfix.set_messagelist()
@@ -54,21 +65,26 @@ fun! s:Vfix.set_messagelist()
 	let self.messages = split(messages, "\n")
 	return self
 endfun " }}}
-" F s:Vfix.file2buf(fn, line)                                     Read file {{{1
+" D s:file_cache                                               Cached files {{{1
+let s:file_cache = { }
+" }}}
+" F s:Vfix.file2buf(fn)                                           Read file {{{1
 " fn:   File to read
-" line: Read at least line + 2 lines from file
-fun! s:Vfix.file2buf(fn, line)
+fun! s:Vfix.file2buf(fn)
 	let buf = []
-	let head = executable('head')
-	try
-
-		let buf = readfile(a:fn, '', a:line + 2)
-	catch
-		let buf = []
-	endtry
+	if has_key(s:file_cache, a:fn)
+		let buf = s:file_cache[a:fn]
+	else
+		try
+			let buf = readfile(a:fn)
+			let s:file_cache[a:fn] = buf
+		catch
+			call self.warn('Vfix: Unable to read ' . a:fn)
+			let buf = []
+		endtry
+	endif
 	return buf
 endfun " }}}
-
 " F s:Vfix.ctx_from_buf(buf, line)                  Get context from buffer {{{1
 " buf   : Buffer with code     list
 " line  : Offset in code to focus on
@@ -101,7 +117,7 @@ fun! s:Vfix.resolve_ref(ref, type) abort
 		let m = matchlist(fun[1], 'Last set from \(\f\+\) line \([0-9]\+\)')
 		if len(m)
 			let fn = expand(m[1])
-			let buf = self.file2buf(fn, m[2] + 1)
+			let buf = self.file2buf(fn)
 			if len(buf)
 				let fun = buf[m[2] - 1]
 			endif
@@ -143,7 +159,7 @@ fun! s:Vfix.resolve_ref_verbose(entry, type) abort
 			let a:entry.file = fn
 			let a:entry.fline = m[2]
 			let ce = a:entry.offs + m[2]
-			let buf = self.file2buf(fn, ce + 10)
+			let buf = self.file2buf(fn)
 			if len(buf)
 				let a:entry.fun = buf[m[2] - 1]
 				let a:entry.ctx = self.ctx_from_buf(buf, ce - 1)
@@ -228,7 +244,7 @@ endfun " }}}
 fun! s:Vfix.push_err_global(fn) abort
 	let fn = expand(a:fn)
 	let errors = self.get_errors('efile')
-	let buf = self.file2buf(fn, errors.last_eline)
+	let buf = self.file2buf(fn)
 	if len(buf)
 		let errors.stack += [#{
 			\ file  : fn,
@@ -599,6 +615,10 @@ fun! s:Vfix.run(...)
 	call self.parse_messages()
 
 	" Post build
+
+	" Clear cached files
+	let s:file_cache = { }
+
 	if self.cnf.reverse
 		" LIFO or FIFO
 		call reverse(self.reflist)
