@@ -43,10 +43,24 @@ let s:cnf_default = #{
 	\ clr_once: 0,
 	\ ignore_lost: 0,
 	\ clr_always: 0,
-	\ auto_run: 0
+	\ auto_run: 0,
+	\ no_persistent_cache: 1,
+	\ use_sysread: 0,
+	\ cmd_file_read: 'cat'
 \}
 " }}}
 
+" F s:Vfix.warn()                                      Echo warning message {{{1
+"
+fun! s:Vfix.warn(s, persistent = 0)
+	echohl WarningMsg
+	if a:persistent
+		echom a:s
+	else
+		echo a:s
+	endif
+	echohl None
+endfun " }}}
 " F s:Vfix.set_messagelist()                              Read all messages {{{1
 " Out: self.messages    list
 fun! s:Vfix.set_messagelist()
@@ -54,21 +68,51 @@ fun! s:Vfix.set_messagelist()
 	let self.messages = split(messages, "\n")
 	return self
 endfun " }}}
-" F s:Vfix.file2buf(fn, line)                                     Read file {{{1
+" D s:file_cache                                               Cached files {{{1
+let s:file_cache = { }
+" }}}
+" F s:Vfix.file_read_sys(fn)                         Read file using system {{{1
 " fn:   File to read
-" line: Read at least line + 2 lines from file
-fun! s:Vfix.file2buf(fn, line)
+"
+" By using system command we prevent the files from being added to bufferlist.
+fun! s:Vfix.file_read_sys(fn)
 	let buf = []
-	let head = executable('head')
 	try
-
-		let buf = readfile(a:fn, '', a:line + 2)
+		let buf = systemlist(self.cnf.cmd_file_read . ' ' . shellescape(a:fn))
 	catch
+		call self.warn('Vfix: Unable to read ' . a:fn)
+		let buf = []
+	endtry
+	return buf
+endfun
+" F s:Vfix.file_read_vim(fn)                            Read file using vim {{{1
+" fn:   File to read
+"
+" Read file using vim's internal readfile().
+" Note: This causes the file to end up in the hidden buffer-list. Optionally
+" use file_read_sys().
+fun! s:Vfix.file_read_vim(fn)
+	let buf = []
+	try
+		let buf = readfile(a:fn)
+	catch
+		call self.warn('Vfix: Unable to read ' . a:fn)
 		let buf = []
 	endtry
 	return buf
 endfun " }}}
-
+" F s:Vfix.file2buf(fn)               Read .vim file where error originated {{{1
+fun! s:Vfix.file2buf(fn)
+	if has_key(s:file_cache, a:fn)
+		let buf = s:file_cache[a:fn]
+	elseif self.cnf.use_sysread
+		let buf = self.file_read_sys(a:fn)
+	else
+		let buf = self.file_read_vim(a:fn)
+	endif
+	let s:file_cache[a:fn] = buf
+	return buf
+endfun  " }}}
 " F s:Vfix.ctx_from_buf(buf, line)                  Get context from buffer {{{1
 " buf   : Buffer with code     list
 " line  : Offset in code to focus on
@@ -101,7 +145,7 @@ fun! s:Vfix.resolve_ref(ref, type) abort
 		let m = matchlist(fun[1], 'Last set from \(\f\+\) line \([0-9]\+\)')
 		if len(m)
 			let fn = expand(m[1])
-			let buf = self.file2buf(fn, m[2] + 1)
+			let buf = self.file2buf(fn)
 			if len(buf)
 				let fun = buf[m[2] - 1]
 			endif
@@ -143,7 +187,7 @@ fun! s:Vfix.resolve_ref_verbose(entry, type) abort
 			let a:entry.file = fn
 			let a:entry.fline = m[2]
 			let ce = a:entry.offs + m[2]
-			let buf = self.file2buf(fn, ce + 10)
+			let buf = self.file2buf(fn)
 			if len(buf)
 				let a:entry.fun = buf[m[2] - 1]
 				let a:entry.ctx = self.ctx_from_buf(buf, ce - 1)
@@ -228,7 +272,7 @@ endfun " }}}
 fun! s:Vfix.push_err_global(fn) abort
 	let fn = expand(a:fn)
 	let errors = self.get_errors('efile')
-	let buf = self.file2buf(fn, errors.last_eline)
+	let buf = self.file2buf(fn)
 	if len(buf)
 		let errors.stack += [#{
 			\ file  : fn,
@@ -467,6 +511,7 @@ let s:VfixHelp = [
 	\ ['ignore_lost',  'ig', 'nolost  - Ignore lost functions.   Default OFF'],
 	\ ['auto_run',     'au', 'autorun - Vfix on sourcing a file. Default OFF'],
 	\ ['clr_always',   'ac', 'clear   - Alway clear ":messages". Default OFF'],
+	\ ['use_sysread',  'sr', 'reader  - Use external filereader. Default OFF'],
 	\ [v:null,         'cc', 'clear   - Clear messages once.'],
 	\ [v:null,         'sf', 'Print Status for flags.'],
 	\ [v:null,          'h', 'This help']
@@ -488,6 +533,11 @@ fun! s:Vfix.show_flags_state()
 			call self.echo_flag(h)
 		endif
 	endfor
+	if self.cnf.use_sysread
+		echohl Statement
+		echo "External filereader command: " . self.cnf.cmd_file_read
+		echohl None
+	endif
 endfun " }}}
 
 " F s:Vfix.flip_option(k)                               Flip settings flags {{{2
@@ -533,7 +583,8 @@ endfun " }}}
 " F s:Vfix_ccomp(A, L, P)                     Commandline Complete function {{{2
 fun! s:Vfix_ccomp(A, L, P)
 	let base = ['a ', 'r ', 'o ', 's ', 'cc ',
-		\ 'ig', 'au', 'ac', 'h ', 'sf', 'help ']
+		\ 'ig', 'au', 'ac', 'h ', 'sf ',
+		\ 'sr ', 'help ']
 	let pri = filter(base, 'v:val =~# "^".a:A')
 	return pri
 endfun " }}}
@@ -564,6 +615,10 @@ fun! s:Vfix.set_opts(n, opts)
 		elseif opt == 'ig'
 			call self.set_option('ignore_lost', val)
 			let r = 1
+		elseif opt == 'sr'
+			call self.set_option('use_sysread', val)
+			call self.setup_sys_fileread()
+			let r = 1
 		elseif opt == 'ac'
 			call self.set_option('clr_always', val)
 			call self.autocmd_set()
@@ -587,6 +642,9 @@ endfun " }}}
 " F s:Vfix.run(...)                                                    Main {{{1
 "
 fun! s:Vfix.run(...)
+	if ! self.strapped
+		call self.boot()
+	endif
 	" Parse options
 	if self.set_opts(a:0, a:000)
 		return 1
@@ -599,13 +657,19 @@ fun! s:Vfix.run(...)
 	call self.parse_messages()
 
 	" Post build
+
+	" Clear cached files
+	if ! self.cnf.no_persistent_cache
+		let s:file_cache = { }
+	endif
+
 	if self.cnf.reverse
 		" LIFO or FIFO
 		call reverse(self.reflist)
 	endif
 
 	" Populate
-	call self.update_quickfix()
+	" call self.update_quickfix()
 
 	" Display
 	if ! self.cnf.silent
@@ -637,6 +701,24 @@ fun! s:Vfix.autocmd_set(clear = 0)
 		@silent augroup! VfixAurunAfterSourcing
 	endif
 endfun " }}}
+" F s:Vfix.setup_sys_fileread()                 Validate system file reader {{{1
+fun! s:Vfix.setup_sys_fileread()
+	if ! self.cnf.use_sysread
+		return
+	endif
+	let bin = self.cnf.cmd_file_read->matchstr('^\S\+')
+	if !executable(bin)
+		let self.cnf.use_sysread = 0
+		" Only warn if user has set this by global options
+		if exists('g:Vfix_use_sysread') ||
+			\ exists('g:Vfix_cmd_file_read')
+			call self.warn(
+				\ 'Can not find "' . bin . '" cmd_file_read: '
+				\ . self.cnf.cmd_file_read
+				\ . ' Using internal readfile()')
+		endif
+	endif
+endfun " }}}
 " F s:Vfix.def_commands()                                   Define commands {{{1
 fun! s:Vfix.def_commands()
 	command! -nargs=* -complete=customlist,s:Vfix_ccomp -bar Vfix
@@ -651,26 +733,32 @@ fun! s:Vfix.boot()
 		let self.strapped =
 			\ self.cnf.re_source_globals ? v:false : v:true
 		call self.autocmd_set(1)
+		unlet s:cnf_bak
 	endif
 
-	call self.def_commands()
+	" XXX Do not run this if re-sourcing THIS file and
+	"     re_source_globals != true
+	if ! self.strapped
+		let self.strapped = v:true
+		" Set options from optional global configurations
+		for k in keys(s:cnf_default)
+			let self.cnf[k] = get(g:, 'Vfix_' . k, self.cnf[k])
+		endfor
+	endif
 
 	call self.autocmd_set()
-
-	" XXX Abort bootload here if this is a re-sourcing and
-	"     re_source_globals != true
-	if self.strapped
-		return
-	endif
-
-	let self.strapped = v:true
-	" Set options from optional global configurations
-	for k in keys(s:cnf_default)
-		let self.cnf[k] = get(g:, 'Vfix_' . k, self.cnf[k])
-	endfor
+	call self.setup_sys_fileread()
 endfun
+" }}}
 
-call s:Vfix.boot()
+"   Startup                                             Set up delayed boot {{{1
+" If g:Vfix_load_on_startup is set  to a truth value boot now.
+" Else boot on first call by :Vfix
+if get(g:, 'Vfix_load_on_startup', v:false)
+	call s:Vfix.boot()
+endif
+" But we need to set up the command ...
+call s:Vfix.def_commands()
 
 let &cpo= s:keepcpo
 unlet s:keepcpo
