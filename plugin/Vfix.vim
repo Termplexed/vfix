@@ -749,8 +749,8 @@ fun! s:Vfix.add_msgmark(...)
 	echohl None
 endfun
 " }}}
-" F s:Vfix.on_au_add_msgmark()                        Event Handler MsgMark {{{1
-fun! s:Vfix.on_au_add_msgmark()
+" F s:Vfix.on_SourcePre()                                         SourcePre {{{1
+fun! s:Vfix.on_SourcePre()
 	" Ignore Vim startup
 	if ! v:vim_did_enter
 		return
@@ -764,15 +764,24 @@ fun! s:Vfix.on_au_add_msgmark()
 	call self.add_msgmark()
 endfun
 " }}}
+" F s:Vfix.on_SourcePost()                                       SourcePost {{{1
+fun! s:Vfix.on_SourcePost()
+	" Autoload causes trigger
+	if ! v:vim_did_enter || expand("<afile>") =~# '/autoload/'
+		return
+	endif
+	call self.run()
+endfun
+" }}}
 " F s:Vfix.autocmd_set()                                   Set autocommands {{{1
 fun! s:Vfix.autocmd_set()
 	augroup VfixAutocommands
 		autocmd!
 		if self.cnf.auto_run
-			autocmd SourcePost *.vim call s:Vfix.run()
+			autocmd SourcePost *.vim call s:Vfix.on_SourcePost()
 		endif
 		if self.cnf.auto_mark
-			autocmd SourcePre *.vim call s:Vfix.on_au_add_msgmark()
+			autocmd SourcePre *.vim call s:Vfix.on_SourcePre()
 		endif
 	augroup END
 endfun
@@ -816,13 +825,13 @@ fun! s:Vfix.run(...)
 
 	" Display
 	if ! self.cnf.silent
+		" Filtering out /autoload/ this might finally not be so buggy.
 		if self.cnf.copen
 			keepalt copen
-			"wincmd p
+			wincmd p
 		else
-			cw
-			"keepalt cw
-			"wincmd p
+			keepalt cw
+			wincmd p
 		endif
 	endif
 
