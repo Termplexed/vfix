@@ -22,11 +22,15 @@ set cpo&vim
 " is set to a value evaluating to true. Look at s:Vfix.boot() for more.
 if exists('s:Vfix.cnf')
 	let s:cnf_bak = copy(s:Vfix.cnf)
+	let s:mark_counter = s:Vfix.mark_counter
 endif
 
 let s:Vfix = {
 	\ 'strapped': 0,
-	\ 'cnf': { }
+	\ 'cnf': { },
+	\ 'mark_counter': 0,
+	\ 'search_mark': '',
+	\ 'hi_mark': 'Comment'
 \}
 
 " }}}
@@ -39,14 +43,17 @@ let s:cnf_default = {
 	\ 'append': 0,
 	\ 'copen': 0,
 	\ 'silent': 0,
-	\ 'reverse': 1,
+	\ 'reverse': 0,
 	\ 'clr_once': 0,
 	\ 'ignore_lost': 0,
 	\ 'clr_always': 0,
-	\ 'auto_run': 0
+	\ 'auto_run': 0,
+	\ 'filter_mark': 1,
+	\ 'auto_mark': 1,
+	\ 'marks_show': 1,
+	\ 'hi_mark': 'Comment'
 \}
 " }}}
-
 " F s:Vfix.warn()                                      Echo warning message {{{1
 "
 fun! s:Vfix.warn(s, persistent)
@@ -60,9 +67,21 @@ fun! s:Vfix.warn(s, persistent)
 endfun " }}}
 " F s:Vfix.set_messagelist()                              Read all messages {{{1
 " Out: self.messages    list
-fun! s:Vfix.set_messagelist()
-	let messages = execute('messages')
-	let self.messages = split(messages, "\n")
+fun! s:Vfix.set_messagelist(...)
+	let mm = execute('messages')
+	if (a:0 && a:1)
+		" All
+	elseif self.cnf.filter_mark
+		if self.search_mark == '0'
+			" All
+		elseif self.search_mark != ''
+			let mm = matchstr(mm, '.*\zs;; VfixM \s*' . self.search_mark . '.*')
+		elseif self.mark_counter > 0
+			let mm = matchstr(mm, '.*\zs;; VfixM .*')
+		endif
+		let self.search_mark = ''
+	endif
+	let self.messages = split(mm, "\n")
 	return self
 endfun " }}}
 " D s:file_cache                                               Cached files {{{1
@@ -114,7 +133,8 @@ fun! s:Vfix.resolve_ref(ref, type) abort
 
 	if fun != 'N/A'
 		let fun = split(fun, "\n")
-		let m = matchlist(fun[1], 'Last set from \(\f\+\) line \([0-9]\+\)')
+		let m = matchlist(
+			\ fun[1], 'Last set from \(\f\+\) line \([0-9]\+\)')
 		if len(m)
 			let fn = expand(m[1])
 			let buf = self.file2buf(fn)
@@ -153,7 +173,8 @@ fun! s:Vfix.resolve_ref_verbose(entry, type) abort
 
 	if fun != 'N/A'
 		let fun = split(fun, "\n")
-		let m = matchlist(fun[1], 'Last set from \(\f\+\) line \([0-9]\+\)')
+		let m = matchlist(
+			\ fun[1], 'Last set from \(\f\+\) line \([0-9]\+\)')
 		if len(m)
 			let fn = expand(m[1])
 			let a:entry.file = fn
@@ -330,14 +351,18 @@ fun! s:Vfix.get_errors(type, ...) abort
 			elseif e[1] != ''
 				let line = e[1]
 			elseif e[2] != ''
-				let err += [{'line': line, 'nr': 0, 'txt': "Interrupted", 'ctx': 'N/A'}] ", xx: e}]
+				let err += [{'line': line, 'nr': 0,
+					\ 'txt': "Interrupted", 'ctx': 'N/A'}]
 			elseif e[3] != ''
-				" TODO: Add entry for resolved function in message
-				" Trigger by for example: call Some_fun() where Some_fun()
-				" require arguments.
-				" XXX: Partially done, but should likely be refactored.
+				" TODO: Add entry for resolved function in
+				" message Trigger by for example:
+				" call Some_fun() where Some_fun() require
+				" arguments.
+				" XXX: Partially done, but should likely be
+				" refactored.
 				let txt = self.resolve_msg(e[4])
-				let err += [{'line': line, 'nr': e[3], 'txt': txt, 'ctx': 'N/A'}] ", xx: e}]
+				let err += [{'line': line, 'nr': e[3],
+					\ 'txt': txt, 'ctx': 'N/A'}] ", xx: e}]
 			endif
 		endif
 		let i += 1
@@ -476,17 +501,33 @@ endfun " }}}
 
 " L s:VfixHelp                                       Help and flags handler {{{2
 let s:VfixHelp = [
-	\ ['append',        'a', 'append  - Append to QuickFix List. Default OFF:replace'],
-	\ ['reverse',       'r', 'reverse - Reverse messages.        Default ON :LIFO'],
-	\ ['copen',         'o', 'copen   - Open using copen.        Default OFF:cw'],
-	\ ['silent',        's', 'silent  - Do not open window.      Default OFF'],
-	\ ['ignore_lost',  'ig', 'nolost  - Ignore lost functions.   Default OFF'],
-	\ ['auto_run',     'au', 'autorun - Vfix on sourcing a file. Default OFF'],
-	\ ['clr_always',   'ac', 'clear   - Alway clear ":messages". Default OFF'],
-	\ ['0',            'cc', 'clear   - Clear messages once.'],
-	\ ['0',            'sf', 'Print Status for flags.'],
-	\ ['0',             'h', 'This help']
+\ ['append',        'a', 'append    - Append to QuickFix List. Default OFF:replace'],
+\ ['reverse',       'r', 'reverse   - Reverse messages.        Default OFF:FIFO'],
+\ ['copen',         'o', 'copen     - Open using copen.        Default OFF:cw'],
+\ ['silent',        's', 'silent    - Do not open window.      Default OFF'],
+\ ['ignore_lost',  'ig', 'nolost    - Ignore lost functions.   Default OFF'],
+\ ['auto_run',     'au', 'autorun   - Vfix on sourcing a file. Default OFF'],
+\ ['clr_always',   'ac', 'clear     - Alway clear ":messages". Default OFF'],
+\ ['filter_mark',  'fm', 'use-mark  - Only from last mark.     Default ON'],
+\ ['0',             'm', 'use-mark  - Search mark.'],
+\ ['auto_mark',    'am', 'auto-mark - Add marks in :messages.  Default ON'],
+\ ['0',             'M', 'mark-now  - Add a mark in :messages.'],
+\ ['0',            'lm', 'list-m    - List marks' ],
+\ ['0',            'cc', 'clear     - Clear messages once.'],
+\ ['0',            'sf', 'Print Status for flags.'],
+\ ['0',             'h', 'This help']
 \ ] " }}}
+
+" F s:Vfix_ccomp(A, L, P)                     Commandline Complete function {{{2
+fun! s:Vfix_ccomp(A, L, P)
+	if a:A == 'M' || a:A == 'm'
+		return a:A . ' '
+	endif
+	let base = ['a ', 'r ', 'o ', 's ', 'ig ', 'au', 'ac',
+		\ 'fm ', 'am ', 'lm', 'cc', 'sf ', 'h ', 'help ']
+	let pri = filter(base, 'v:val =~# "^".a:A')
+	return pri
+endfun " }}}
 
 " F s:Vfix.echo_flag(h)                      Helper for - Echo flags status {{{2
 fun! s:Vfix.echo_flag(h)
@@ -505,6 +546,12 @@ fun! s:Vfix.show_flags_state()
 		endif
 	endfor
 endfun " }}}
+
+fun! s:Vfix.list_markers()
+	call self.set_messagelist(1)
+	call filter(self.messages, 'v:val =~ "^;; VfixM "')
+	echo join(self.messages, "\n")
+endfun
 
 " F s:Vfix.flip_option(k)                               Flip settings flags {{{2
 fun! s:Vfix.flip_option(k)
@@ -549,19 +596,13 @@ fun! s:Vfix.help()
 	return 1
 endfun " }}}
 
-" F s:Vfix_ccomp(A, L, P)                     Commandline Complete function {{{2
-fun! s:Vfix_ccomp(A, L, P)
-	let base = ['a ', 'r ', 'o ', 's ', 'cc ',
-		\ 'ig', 'au', 'ac', 'h ', 'sf', 'help ']
-	let pri = filter(base, 'v:val =~# "^".a:A')
-	return pri
-endfun " }}}
-
 " F s:Vfix.set_opts(n, opts)                                  Parse options {{{2
 " Parse command options. If r = 1 at end, execution is aborted.
 fun! s:Vfix.set_opts(n, opts)
 	let r = 0
+	let i = 0
 	for opt in a:opts
+		let i += 1
 		if opt =~ '[:=]'
 			let v = split(opt, '[:=]')
 			let opt = v[0]
@@ -580,28 +621,108 @@ fun! s:Vfix.set_opts(n, opts)
 			call self.set_option('copen', val)
 		elseif opt == 'r'
 			call self.set_option('reverse', val)
+		elseif opt == 'fm'
+			call self.set_option('filter_mark', val)
+		elseif opt == 'm'
+			let self.search_mark = a:opts[i]
+			break
+		elseif opt == 'hm'
+			" XXX: Hidden feature (for now)
+			let self.hi_mark = a:opts[i]
+			let self.cnf.hi_mark = a:opts[i]
+			call self.set_mark_highlight()
 		elseif opt == 'ig'
 			call self.set_option('ignore_lost', val)
 			let r = 1
 		elseif opt == 'ac'
 			call self.set_option('clr_always', val)
-			call self.autocmd_set(0)
+			let r = 1
+		elseif opt == 'lm'
+			call self.list_markers()
+			let r = 1
+		elseif opt == 'am'
+			call self.set_option('auto_mark', val)
+			call self.autocmd_set()
 			let r = 1
 		elseif opt == 'au'
 			call self.set_option('auto_run', val)
-			call self.autocmd_set(0)
+			call self.autocmd_set()
 			let r = 1
+		elseif opt == 'M'
+			let txt = join(a:opts[i:], " ")
+			call self.add_msgmark(txt == "" ? "Manual" : txt)
+			let r = 1
+			break
 		elseif opt == 'sf'
 			call self.show_flags_state()
 			let r = 1
 		elseif opt == 'h' || opt == 'help'
 			call self.help()
 			let r = 1
+		else
+			call self.warn("Unknown command '" . opt . "'", 0)
+			let r = 1
+			break
 		endif
 	endfor
 	return r
 endfun " }}}
 " }}}
+
+" F s:Vfix.autocmd_clear()                               Remove autocommand {{{1
+fun! s:Vfix.autocmd_clear()
+	augroup VfixAutocommands
+		autocmd!
+	augroup END
+	silent augroup! VfixAutocommands
+endfun
+" F s:Vfix.set_mark_highlight()            Set Highlight group for messages {{{1
+fun! s:Vfix.set_mark_highlight()
+	exec 'highlight! link VfixMarksHighlight ' . self.hi_mark
+endfun " }}}
+" F s:Vfix.add_msgmark()                              Add mark in :messages {{{1
+fun! s:Vfix.add_msgmark(...)
+	let self.mark_counter += 1
+	let m = a:0 ? a:1 : ('from ' . expand('<afile>'))
+	echohl VfixMarksHighlight
+	echomsg printf(";; VfixM %2d %s %s",
+		\ self.mark_counter,
+		\ strftime('%H:%M:%S'),
+		\ m)
+	redraw
+	echohl None
+endfun " }}}
+" F s:Vfix.on_au_add_msgmark()                        Event Handler MsgMark {{{1
+fun! s:Vfix.on_au_add_msgmark()
+	" Ignore Vim startup
+	if ! v:vim_did_enter
+		return
+	endif
+	" Ignore /autoload/
+	" TODO: Perhaps add mark if currently edited file is in a /autoload/
+	" directory.
+	if expand("<afile>") =~# '/autoload/'
+		return
+	endif
+	call self.add_msgmark()
+endfun " }}}
+" F s:Vfix.autocmd_set()                                   Set autocommands {{{1
+fun! s:Vfix.autocmd_set()
+	augroup VfixAutocommands
+		autocmd!
+		if self.cnf.auto_run
+			autocmd SourcePost *.vim call s:Vfix.run()
+		endif
+		if self.cnf.auto_mark
+			autocmd SourcePre *.vim call s:Vfix.on_au_add_msgmark()
+		endif
+	augroup END
+endfun " }}}
+" F s:Vfix.def_commands()                                   Define commands {{{1
+fun! s:Vfix.def_commands()
+	command! -nargs=* -complete=customlist,s:Vfix_ccomp -bar Vfix
+		\ :call s:Vfix.run(<f-args>)
+endfun " }}}
 
 " F s:Vfix.run(...)                                                    Main {{{1
 "
@@ -655,33 +776,18 @@ fun! s:Vfix.run(...)
 	let self.reflist = []
 	let self.messages = []
 endfun " }}}
-" F s:Vfix.autocmd_set()                           Set / Remove autocommand {{{1
-fun! s:Vfix.autocmd_set(clear)
-	if self.cnf.auto_run && !a:clear
-		augroup VfixAurunAfterSourcing
-			autocmd!
-			autocmd SourcePost *.vim call s:Vfix.run()
-		augroup END
-	else
-		@silent autocmd! VfixAurunAfterSourcing
-		@silent augroup! VfixAurunAfterSourcing
-	endif
-endfun " }}}
-" F s:Vfix.def_commands()                                   Define commands {{{1
-fun! s:Vfix.def_commands()
-	command! -nargs=* -complete=customlist,s:Vfix_ccomp -bar Vfix
-		\ :call s:Vfix.run(<f-args>)
-endfun " }}}
 " F s:Vfix.boot()                                                 Bootstrap {{{1
 fun! s:Vfix.boot()
 	call extend(s:Vfix.cnf, s:cnf_default)
 
 	if exists('s:cnf_bak')
 		call extend(s:Vfix.cnf, s:cnf_bak)
+		let self.mark_counter = s:mark_counter
 		let self.strapped =
 			\ self.cnf.re_source_globals ? 0 : 1
-		call self.autocmd_set(1)
+		call self.autocmd_clear()
 		unlet s:cnf_bak
+		unlet s:mark_counter
 	endif
 
 	" XXX Do not run this if re-sourcing THIS file and
@@ -690,21 +796,21 @@ fun! s:Vfix.boot()
 		let self.strapped = 1
 		" Set options from optional global configurations
 		for k in keys(s:cnf_default)
-			let self.cnf[k] = self.val2bool(get(g:, 'Vfix_' . k, self.cnf[k]))
+			let self.cnf[k] = self.val2bool(
+					\ get(g:, 'Vfix_' . k, self.cnf[k]))
 		endfor
 	endif
 
-	call self.def_commands()
-	call self.autocmd_set(0)
+	call self.set_mark_highlight()
+	call self.autocmd_set()
 endfun
-
+let g:Vfix_load_on_startup = 1
 "   Startup                                             Set up delayed boot {{{1
 " If g:Vfix_load_on_startup is set  to a truth value boot now.
 " Else boot on first call by :Vfix
 if get(g:, 'Vfix_load_on_startup', '0') != '0'
 	call s:Vfix.boot()
 endif
-" But we need to set up the command ...
 call s:Vfix.def_commands()
 
 let &cpo= s:keepcpo

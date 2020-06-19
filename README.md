@@ -10,6 +10,16 @@ A crude and simple script for Vim to resolve some of the error `:messages` yield
 
 Can be a help to find where errors originate etc.
 
+* For Vim >= 8.1.0362
+* For Nvim >= 0.4.0 (#a2e48b556b7537acd26353b6cc201410be7cf3dc)
+
+---
+
+Latest: Added marks
+
+[[_TOC_]]
+
+
 ---
 
 ## :information_source:&nbsp;&nbsp;&nbsp;About
@@ -54,14 +64,19 @@ The script comes with a few options. When Vfix has been sourced you can run:
 to get a list:
 ```wasm
 Options:
-  a  : append  - Append to QuickFix List. Default OFF:replace
-  r  : reverse - Reverse messages.        Default ON :LIFO
-  o  : copen   - Open using copen.        Default OFF:cw
-  s  : silent  - Do not open window.      Default OFF
- ig  : nolost  - Ignore lost functions.   Default OFF
- au  : autorun - Vfix on sourcing a file. Default OFF
- ac  : clear   - Alway clear ":messages". Default OFF
- cc  : clear   - Clear messages once.
+  a  : append    - Append to QuickFix List. Default OFF:replace
+  r  : reverse   - Reverse messages.        Default OFF:FIFO
+  o  : copen     - Open using copen.        Default OFF:cw
+  s  : silent    - Do not open window.      Default OFF
+ ig  : nolost    - Ignore lost functions.   Default OFF
+ au  : autorun   - Vfix on sourcing a file. Default OFF
+ ac  : clear     - Alway clear ":messages". Default OFF
+ fm  : use-mark  - Only from last mark.     Default ON
+  m  : use-mark  - Search mark.
+ am  : auto-mark - Add marks in :messages.  Default ON
+  M  : mark-now  - Add a mark in :messages.
+ lm  : list-m    - List marks
+ cc  : clear     - Clear messages once.
  sf  : Print Status for flags.
   h  : This help
 ```
@@ -74,6 +89,8 @@ Beware that `cc` and `ac` erase `:messages`. To view status of flags use `:Vfix 
 
 Note that every time a script get sourced it get a new reference. If this is anumeric ref. it can not be resolved later and one will get `N/A` + a noop address in the errors list. Activate `ig` to silence these.
 
+*Update*: With *marks* this is now better handled. Use marks and all old messages are ignored.
+
 ##  :earth_americas:&nbsp;&nbsp;&nbsp;Global options
 
 Override on options can be set in .vimrc (or elsewhere). All takes `1` for on and `0` for off.
@@ -82,13 +99,18 @@ Override on options can be set in .vimrc (or elsewhere). All takes `1` for on an
 g:Vfix_append         0 " Append to QuickFix error list. Else replace.
 g:Vfix_copen          0 " Use copen. Else cwindow.
 g:Vfix_silent         0 " Never open window.
-g:Vfix_reverse        1 " Reverse messages / errors LIFO. Main reson for this is
+g:Vfix_reverse        0 " Reverse messages / errors LIFO. Main reson for this is
                         " when one have a lot of `:messages`. Would perhaps be
                         " better to jump to end of error list.
 g:Vfix_ignore_lost    0 " Ignore errors where functions can not be resolved. See
                         " note below.
 g:Vfix_clr_always     0 " Clear :messages each time Vfix is executed
 g:Vfix_auto_run       0 " Auto run on sourcing. Can be buggy.
+
+g:Vfix_filter_mark    1 " Only parse messages from last mark
+g:Vfix_auto_mark      1 " Add mark in :messages each time a script is sourced
+g:Vfix_hi_mark  Comment " Highlighting group to use for marks in messages
+
 
 g:Vfix_load_on_startup    0 " The boot() section of the code will be run first
                             " time :Vfix is called. Set this to 1 to boot()
@@ -97,10 +119,37 @@ g:Vfix_re_source_globals  0 " Mainly for hacking ***this*** script.
                             " If set and true global options will be reset when
 			    " re-sourcing script.
 ```
+
+
+
+
+
+##  :newspaper:&nbsp;&nbsp;&nbsp;News
+
+**Marks in `:messages` and new default values.**
+
+Added support for marks in messages. It makes, I hope, for a cleaner experience.
+
+By this the default reversing of messages is also turned off.
+
+Works in short like this:
+
+1. *Pre Sourcing*: echo a persistent message (mark) to `:messages`
+2. *On run*: Search for last mark and ingore all messages before it
+
+* Auto marking + filtering from last mark is on by default.
+* All marks has a prefix of `;; VfixM  NN HH:MM:SS <file|text>` where *NN* is an internal counter.
+* Add marks manually by `:Vfix M <optional text>`
+* Filter using earlier marks by `:Vfix m NR..`
+* Show all by uing `:Vfix m 0` , or turn mark filtering off `:Vfix fm=0`
+* List marks by: `:Vfix lm`
+* Set marks highlighting by `g:Vfix_hi_mark`, default "*Comment*"
+
+
 ##  :mega:&nbsp;&nbsp;&nbsp;Notes
 
 - [x] Support for Neovim (and older versions then 8.2)
-- ~~[ ] Add option to use shell command to read script files. Each time we read a
+- [ ]~~ Add option to use shell command to read script files. Each time we read a
 file, even though it is with `readfile()`, the file is pushed to the hidden
 buflist. This can be a bit noisy.~~ Files are added when updating Quickfix so
 this is not an option.
@@ -116,7 +165,7 @@ ork on this.
 - [ ] It is possible to cache references to *all* objects and functions each
 time a script is sourced by looping `s:`, `g:` etc. Could have it as an option,
 but likely best suited as an addon. Is a bit complex and usually not worth it.
-- [ ] Find a way to set a a *mark* in `:messages` if user reloads a script they
+- [x] Find a way to set a a *mark* in `:messages` if user reloads a script they
 are working on. Could likely use autocommand in combination with `:silent echom`
 This way one could ignore lost messages better.
 - [ ] As we read the files where errors originated and also get context - a few
@@ -126,6 +175,7 @@ do not want to open the file - or the file is open in another vim session.
 - [ ] Look up error number in `:help`? Each `:message` is prepended with an error
 in the form of `ENNN`. Could add a link to this, - but have not found it useful.
 - [ ] Add a plain-text README?
+- [ ] This README started partially as a joke. Clean it up.
 
 ##  :curly_loop:&nbsp;&nbsp;&nbsp;History
 
