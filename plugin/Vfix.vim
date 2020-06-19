@@ -569,9 +569,9 @@ fun! s:Vfix.val2bool(v)
 		return a:v ? 1 : 0
 	endif
 	let v = tolower(a:v)
-	if ['+', 'y', 'true']->index(v) > -1
+	if index(['+', 'y', 'true'], v) > -1
 		return 1
-	elseif ['-', 'n', 'false']->index(v) > -1
+	elseif index(['-', 'n', 'false'], v) > -1
 		return 0
 	else
 		return a:v ? 1 : 0
