@@ -10,6 +10,9 @@ A crude and simple script for Vim to resolve some of the error `:messages` yield
 
 Can be a help to find where errors originate etc.
 
+* For Vim >= 8.1.0362
+* For Nvim >= 0.4.0 (#a2e48b556b7537acd26353b6cc201410be7cf3dc)
+
 ---
 
 ## :information_source:&nbsp;&nbsp;&nbsp;About
