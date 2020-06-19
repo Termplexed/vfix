@@ -15,7 +15,7 @@ Can be a help to find where errors originate etc.
 
 ---
 
-[Latest: Added marks](README.md#newspapernews)
+[Latest: Added marks](https://github.com/Termplexed/vfix#newspapernews)
 
 
 ---
