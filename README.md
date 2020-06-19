@@ -17,7 +17,6 @@ Can be a help to find where errors originate etc.
 
 [Latest: Added marks](README.md#newspapernews)
 
-[[_TOC_]]
 
 ---
 
@@ -86,7 +85,7 @@ Beware that `cc` and `ac` erase `:messages`. To view status of flags use `:Vfix 
 
 ###  :mag:&nbsp;&nbsp;&nbsp;Lost functions
 
-Note that every time a script get sourced it get a new reference. If this is anumeric ref. it can not be resolved later and one will get `N/A` + a noop address in the errors list. Activate `ig` to silence these.
+Note that every time a script get sourced it get a new reference. If this is a numeric ref. it can not be resolved later and one will get `N/A` + a noop address in the errors list. Activate `ig` to silence these.
 
 *Update*: With *marks* this is now better handled. Use marks and all old messages are ignored.
 
@@ -134,7 +133,12 @@ By this the default reversing of messages is also turned off.
 Works in short like this:
 
 1. *Pre Sourcing*: echo a persistent message (mark) to `:messages`
-2. *On run*: Search for last mark and ingore all messages before it
+2. *On run*: Search for last mark and ignore all messages before it
+
+***Note!*** Marks are not auto added if path is `*/autoload/*`. Yes, this can
+be somewhat inconvenient - but as we hook to SourcePre we risk adding marks
+on places where we do not want them ... Could try to find a better solution
+for this.
 
 * Auto marking + filtering from last mark is on by default.
 * All marks has a prefix of `;; VfixM  NN HH:MM:SS <file|text>` where *NN* is an internal counter.

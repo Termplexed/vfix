@@ -520,11 +520,15 @@ let s:VfixHelp = [
 
 " F s:Vfix_ccomp(A, L, P)                     Commandline Complete function {{{2
 fun! s:Vfix_ccomp(A, L, P)
-	if a:A == 'M' || a:A == 'm'
-		return a:A . ' '
+	if a:L =~# 'M\s\+$'
+		return ['YourMark']
+	elseif a:L =~#  'm\s\+$'
+		return [string(s:Vfix.mark_counter)]
+	elseif a:A =~ '=$'
+		return map(['0', '1'], 'a:A . v:val')
 	endif
 	let base = ['a ', 'r ', 'o ', 's ', 'ig ', 'au', 'ac',
-		\ 'fm ', 'am ', 'lm', 'cc', 'sf ', 'h ', 'help ']
+		\ 'fm ', 'm ', 'am ', 'M ', 'lm', 'cc', 'sf ', 'h ', 'help ']
 	let pri = filter(base, 'v:val =~# "^".a:A')
 	return pri
 endfun " }}}
