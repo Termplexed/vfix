@@ -148,7 +148,7 @@ Works in short like this:
 ##  :mega:&nbsp;&nbsp;&nbsp;Notes
 
 - [x] Support for Neovim (and older versions then 8.2)
-- [ ]~~ Add option to use shell command to read script files. Each time we read a
+- [ ] ~~Add option to use shell command to read script files. Each time we read a
 file, even though it is with `readfile()`, the file is pushed to the hidden
 buflist. This can be a bit noisy.~~ Files are added when updating Quickfix so
 this is not an option.
