@@ -64,7 +64,17 @@ fun! s:Vfix.warn(s, persistent)
 		echo a:s
 	endif
 	echohl None
-endfun " }}}
+endfun
+" }}}
+" Sample messages hack / normalize example                          MsgHack {{{1
+" XXX: Some addon / global var possibility for this perhaps?
+fun! s:Vfix.hack_messages(m)
+	let m = substitute(a:m,
+		\ '\[deoplete]\( function.*\), \(line \d*\)',
+		\ 'Error detected while processing\1:\n\2:\nE000: deoplete', 'g')
+	return m
+endfun
+" }}}
 " F s:Vfix.set_messagelist()                              Read all messages {{{1
 " Out: self.messages    list
 fun! s:Vfix.set_messagelist(...)
@@ -75,17 +85,22 @@ fun! s:Vfix.set_messagelist(...)
 		if self.search_mark == '0'
 			" All
 		elseif self.search_mark != ''
-			let mm = matchstr(mm, '.*\zs;; VfixM \s*' . self.search_mark . '.*')
+			let mm = matchstr(mm, '.*\zs;; VfixM \s*'
+					\ . self.search_mark . '.*')
 		elseif self.mark_counter > 0
 			let mm = matchstr(mm, '.*\zs;; VfixM .*')
 		endif
 		let self.search_mark = ''
 	endif
+	let mm = self.hack_messages(mm)
 	let self.messages = split(mm, "\n")
 	return self
-endfun " }}}
+endfun
+" }}}
 " D s:file_cache                                               Cached files {{{1
+
 let s:file_cache = { }
+
 " }}}
 " F s:Vfix.file2buf(fn)                                           Read file {{{1
 " fn:   File to read
@@ -103,14 +118,16 @@ fun! s:Vfix.file2buf(fn)
 		endtry
 	endif
 	return buf
-endfun " }}}
+endfun
+" }}}
 " F s:Vfix.ctx_from_buf(buf, line)                  Get context from buffer {{{1
 " buf   : Buffer with code     list
 " line  : Offset in code to focus on
 " return: 5 lines of code. 2 before + the line + 2 after
 fun! s:Vfix.ctx_from_buf(buf, line)
 	return a:buf[(a:line < 2 ? 0 : a:line - 2) : (a:line + 2)]
-endfun " }}}
+endfun
+" }}}
 " F s:Vfix.resolve_ref(ref, type) abort               Resolve function name {{{1
 " Use :verbose function XXX to get file and line where function was included,
 " read file and return function as declared in source.
@@ -121,6 +138,9 @@ endfun " }}}
 "
 " TODO: Consider matching type by checking if it is all numbers
 "       instead of passing as argument.
+"       v:throwpoint
+"       v:exception
+"       v:
 fun! s:Vfix.resolve_ref(ref, type) abort
 	let pat = a:type == 'edict' ? '{'.a:ref.'}' : a:ref
 
@@ -144,7 +164,8 @@ fun! s:Vfix.resolve_ref(ref, type) abort
 		endif
 	endif
 	return fun
-endfun " }}}
+endfun
+" }}}
 " F s:Vfix.resolve_ref_verbose(entry, type) abort      Resolve and get info {{{1
 " also modify passed dict entry:
 " +entry.file:  file name
@@ -183,12 +204,14 @@ fun! s:Vfix.resolve_ref_verbose(entry, type) abort
 			let buf = self.file2buf(fn)
 			if len(buf)
 				let a:entry.fun = buf[m[2] - 1]
-				let a:entry.ctx = self.ctx_from_buf(buf, ce - 1)
+				let a:entry.ctx =
+					\ self.ctx_from_buf(buf, ce - 1)
 			endif
 		endif
 	endif
 	return a:entry.file != ''
-endfun " }}}
+endfun
+" }}}
 " D s:Vfix.ml_trace                 Regex patterns used to matchlist trace. {{{1
 " 'messages' line typically is:
 " Some error fun[3]...fun[8]...fun:
@@ -220,7 +243,8 @@ fun! s:Vfix.create_entry(type, ref, ln)
 	\}
 	call self.resolve_ref_verbose(entry, a:type)
 	return entry
-endfun " }}}
+endfun
+" }}}
 " F s:Vfix.push_err_local(type, fr) abort                  Push local error {{{1
 "
 " Entry, local to a function scope, dictionary or function reference error stack.
@@ -258,7 +282,8 @@ fun! s:Vfix.push_err_local(fr) abort
 
 	let self.ix += errors.log_len ? errors.log_len : 1
 	return 0
-endfun " }}}
+endfun
+" }}}
 " F s:Vfix.push_err_global(fn) abort                      Push global error {{{1
 "
 " Add a global scope (inline / outside of function) error stack
@@ -280,7 +305,8 @@ fun! s:Vfix.push_err_global(fn) abort
 	endif
 	let self.ix += errors.log_len ? errors.log_len : 1
 	return 0
-endfun " }}}
+endfun
+" }}}
 " F s:Vfix.push_err_unscoped(type) abort                Push unscoped error {{{1
 "
 " TODO: Better name for unscoped, it is kind of global scoped, but really
@@ -299,7 +325,8 @@ fun! s:Vfix.push_err_unscoped(type) abort
 	let self.reflist += [errors]
 	let self.ix += errors.log_len ? errors.log_len : 1
 	return 0
-endfun " }}}
+endfun
+" }}}
 " F s:Vfix.resolve_msg(t) abort                      Resolve in-message ref {{{1
 "
 " Some messages can be:
@@ -310,14 +337,16 @@ endfun " }}}
 fun! s:Vfix.resolve_msg(t) abort
 	let m = matchstr(a:t, 'function:\? \zs[0-9]\+$')
 	if m != ''
-		let m = substitute(a:t, m .'$', self.resolve_ref(m, 'edict'), '')
+		let m = substitute(a:t, m .'$',
+				\ self.resolve_ref(m, 'edict'), '')
 	else
 		let m = a:t
 	endif
 	" Fix tabs
 	let m = substitute(m, '\^I', ' ', 'g')
 	return m
-endfun " }}}
+endfun
+" }}}
 " F s:Vfix.get_errors(type, ...) abort  Read errors from self.messages list {{{1
 " Starting from current index, read all messages starting with E123
 " or line  : 124
@@ -351,8 +380,11 @@ fun! s:Vfix.get_errors(type, ...) abort
 			elseif e[1] != ''
 				let line = e[1]
 			elseif e[2] != ''
-				let err += [{'line': line, 'nr': 0,
-					\ 'txt': "Interrupted", 'ctx': 'N/A'}]
+				let err += [{
+					\ 'line': line,
+					\ 'nr': 0,
+					\ 'txt': "Interrupted",
+					\ 'ctx': 'N/A'}]
 			elseif e[3] != ''
 				" TODO: Add entry for resolved function in
 				" message Trigger by for example:
@@ -361,8 +393,11 @@ fun! s:Vfix.get_errors(type, ...) abort
 				" XXX: Partially done, but should likely be
 				" refactored.
 				let txt = self.resolve_msg(e[4])
-				let err += [{'line': line, 'nr': e[3],
-					\ 'txt': txt, 'ctx': 'N/A'}] ", xx: e}]
+				let err += [{
+					\ 'line': line,
+					\ 'nr': e[3],
+					\ 'txt': txt,
+					\ 'ctx': 'N/A'}]
 			endif
 		endif
 		let i += 1
@@ -377,7 +412,8 @@ fun! s:Vfix.get_errors(type, ...) abort
 		\ 'log_len'   : i - self.ix,
 		\ 'stack'     : []
 	\}
-endfun " }}}
+endfun
+" }}}
 
 " F s:Vfix.check_eref()                      Check for 'stand alone' errors {{{1
 " Typically
@@ -397,7 +433,8 @@ fun! s:Vfix.check_eref()
 		let r = 0
 	endif
 	return r
-endfun " }}}
+endfun
+" }}}
 " F s:Vfix.check_detected()                         Check for scoped errors {{{1
 "
 " Check if current line from 'messages' is a *normal* Error detected
@@ -412,7 +449,7 @@ fun! s:Vfix.check_detected()
 		\ '\%(function \([][.<>#A-Za-z0-9_]\+\)\)\|' .
 		\ '\%(function \(<SNR>[][.<>#A-Za-z0-9_]\+\)\)\|' .
 		\ '\%(function \(<lambda>[][.<>#A-Za-z0-9_]\+\)\)\|' .
-		\ '\(\f\+\.vim\)\|' .
+		\ '\(\f\+\.vi\%[mrc]\)\|' .
 	\ '\):$')
 	if len(xm)
 		" Could merge 1, 2 and 3
@@ -439,7 +476,8 @@ fun! s:Vfix.check_detected()
 		let r = 0
 	endif
 	return r
-endfun " }}}
+endfun
+" }}}
 " F s:Vfix.parse_messages() abort                            Parse messages {{{1
 "
 " Loop messages and try to detect and resolve errors.
@@ -452,7 +490,8 @@ fun! s:Vfix.parse_messages() abort
 		if r == 0 | let r = self.check_detected() | endif
 		if r == 0 | let self.ix += 1 | endif
 	endwhile
-endfun " }}}
+endfun
+" }}}
 
 " F s:Vfix.update_quickfix()                                Update QuickFix {{{1
 "
@@ -495,7 +534,8 @@ fun! s:Vfix.update_quickfix()
 		endfor
 	endfor
 	call setqflist(e, self.cnf.append ? 'a' : 'r')
-endfun " }}}
+endfun
+" }}}
 
 " Vfix Help and Options                                                HELP {{{1
 
@@ -516,7 +556,8 @@ let s:VfixHelp = [
 \ ['0',            'cc', 'clear     - Clear messages once.'],
 \ ['0',            'sf', 'Print Status for flags.'],
 \ ['0',             'h', 'This help']
-\ ] " }}}
+\ ]
+" }}}
 
 " F s:Vfix_ccomp(A, L, P)                     Commandline Complete function {{{2
 fun! s:Vfix_ccomp(A, L, P)
@@ -531,7 +572,8 @@ fun! s:Vfix_ccomp(A, L, P)
 		\ 'fm ', 'm ', 'am ', 'M ', 'lm', 'cc', 'sf ', 'h ', 'help ']
 	let pri = filter(base, 'v:val =~# "^".a:A')
 	return pri
-endfun " }}}
+endfun
+" }}}
 
 " F s:Vfix.echo_flag(h)                      Helper for - Echo flags status {{{2
 fun! s:Vfix.echo_flag(h)
@@ -539,7 +581,8 @@ fun! s:Vfix.echo_flag(h)
 	exe 'echohl ' .  (f ? 'Statement' : 'Comment')
 	echo printf("%3s= %s,  %s", a:h[1], f, a:h[2])
 	echohl None
-endfun " }}}
+endfun
+" }}}
 
 " F s:Vfix.show_flags_state()                             Echo flags status {{{2
 fun! s:Vfix.show_flags_state()
@@ -549,7 +592,8 @@ fun! s:Vfix.show_flags_state()
 			call self.echo_flag(h)
 		endif
 	endfor
-endfun " }}}
+endfun
+" }}}
 
 fun! s:Vfix.list_markers()
 	call self.set_messagelist(1)
@@ -561,7 +605,8 @@ endfun
 fun! s:Vfix.flip_option(k)
 	let self.cnf[a:k] = !self.cnf[a:k]
 	echo "State " . a:k . ": " . self.cnf[a:k]
-endfun " }}}
+endfun
+" }}}
 
 " F s:Vfix.val2bool(s)                                    String to boolean {{{2
 fun! s:Vfix.val2bool(v)
@@ -576,7 +621,8 @@ fun! s:Vfix.val2bool(v)
 	else
 		return a:v ? 1 : 0
 	endif
-endfun " }}}
+endfun
+" }}}
 
 " F s:Vfix.set_option(k, v)                                       Set flags {{{2
 fun! s:Vfix.set_option(k, v)
@@ -586,7 +632,8 @@ fun! s:Vfix.set_option(k, v)
 		let self.cnf[a:k] = a:v
 		echo "State " . a:k . ": " . self.cnf[a:k]
 	endif
-endfun " }}}
+endfun
+" }}}
 
 " F s:Vfix.help()                                         Command line Help {{{2
 " :Vfix h | help
@@ -598,7 +645,8 @@ fun! s:Vfix.help()
 	endfor
 	echohl None
 	return 1
-endfun " }}}
+endfun
+" }}}
 
 " F s:Vfix.set_opts(n, opts)                                  Parse options {{{2
 " Parse command options. If r = 1 at end, execution is aborted.
@@ -670,7 +718,9 @@ fun! s:Vfix.set_opts(n, opts)
 		endif
 	endfor
 	return r
-endfun " }}}
+endfun
+" }}}
+
 " }}}
 
 " F s:Vfix.autocmd_clear()                               Remove autocommand {{{1
@@ -680,10 +730,12 @@ fun! s:Vfix.autocmd_clear()
 	augroup END
 	silent augroup! VfixAutocommands
 endfun
+" }}}
 " F s:Vfix.set_mark_highlight()            Set Highlight group for messages {{{1
 fun! s:Vfix.set_mark_highlight()
 	exec 'highlight! link VfixMarksHighlight ' . self.hi_mark
-endfun " }}}
+endfun
+" }}}
 " F s:Vfix.add_msgmark()                              Add mark in :messages {{{1
 fun! s:Vfix.add_msgmark(...)
 	let self.mark_counter += 1
@@ -695,7 +747,8 @@ fun! s:Vfix.add_msgmark(...)
 		\ m)
 	redraw
 	echohl None
-endfun " }}}
+endfun
+" }}}
 " F s:Vfix.on_au_add_msgmark()                        Event Handler MsgMark {{{1
 fun! s:Vfix.on_au_add_msgmark()
 	" Ignore Vim startup
@@ -709,7 +762,8 @@ fun! s:Vfix.on_au_add_msgmark()
 		return
 	endif
 	call self.add_msgmark()
-endfun " }}}
+endfun
+" }}}
 " F s:Vfix.autocmd_set()                                   Set autocommands {{{1
 fun! s:Vfix.autocmd_set()
 	augroup VfixAutocommands
@@ -721,12 +775,14 @@ fun! s:Vfix.autocmd_set()
 			autocmd SourcePre *.vim call s:Vfix.on_au_add_msgmark()
 		endif
 	augroup END
-endfun " }}}
+endfun
+" }}}
 " F s:Vfix.def_commands()                                   Define commands {{{1
 fun! s:Vfix.def_commands()
 	command! -nargs=* -complete=customlist,s:Vfix_ccomp -bar Vfix
 		\ :call s:Vfix.run(<f-args>)
-endfun " }}}
+endfun
+" }}}
 
 " F s:Vfix.run(...)                                                    Main {{{1
 "
@@ -779,7 +835,8 @@ fun! s:Vfix.run(...)
 	" Cleanup - Not needed anymore.
 	let self.reflist = []
 	let self.messages = []
-endfun " }}}
+endfun
+" }}}
 " F s:Vfix.boot()                                                 Bootstrap {{{1
 fun! s:Vfix.boot()
 	call extend(s:Vfix.cnf, s:cnf_default)
@@ -808,7 +865,8 @@ fun! s:Vfix.boot()
 	call self.set_mark_highlight()
 	call self.autocmd_set()
 endfun
-let g:Vfix_load_on_startup = 1
+" }}}
+
 "   Startup                                             Set up delayed boot {{{1
 " If g:Vfix_load_on_startup is set  to a truth value boot now.
 " Else boot on first call by :Vfix
@@ -822,7 +880,7 @@ unlet s:keepcpo
 " }}}
 
 
-" EOF and Suggestions                                                 OTHER " {{{1
+" EOF and Suggestions                                               OTHER " {{{1
 " XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX
 " XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX
 				finish
