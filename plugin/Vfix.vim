@@ -75,6 +75,25 @@ fun! s:Vfix.hack_messages(m)
 	return m
 endfun
 " }}}
+" F s:Vfix.filter_by_mark(mm)                               Filter messages {{{1
+fun! s:Vfix.filter_by_mark(mm)
+	if self.search_mark == '0'
+		" All
+	elseif self.search_mark != ''
+		let mm = matchstr(a:mm, '.*\zs;; VfixM \s*'
+				\ . self.search_mark . '.*')
+	elseif self.mark_counter > 0
+		let mm = matchstr(a:mm, '.*\zs;; VfixM .*')
+		if mm == ''
+		" If messages have been cleared and there is new
+		" errors without sourcing
+			let mm = a:mm
+		endif
+	endif
+	let self.search_mark = ''
+	return mm
+endfun
+" }}}
 " F s:Vfix.set_messagelist()                              Read all messages {{{1
 " Out: self.messages    list
 fun! s:Vfix.set_messagelist(...)
@@ -82,15 +101,7 @@ fun! s:Vfix.set_messagelist(...)
 	if (a:0 && a:1)
 		" All
 	elseif self.cnf.filter_mark
-		if self.search_mark == '0'
-			" All
-		elseif self.search_mark != ''
-			let mm = matchstr(mm, '.*\zs;; VfixM \s*'
-					\ . self.search_mark . '.*')
-		elseif self.mark_counter > 0
-			let mm = matchstr(mm, '.*\zs;; VfixM .*')
-		endif
-		let self.search_mark = ''
+		let mm = self.filter_by_mark(mm)
 	endif
 	let mm = self.hack_messages(mm)
 	let self.messages = split(mm, "\n")
@@ -824,6 +835,8 @@ fun! s:Vfix.run(...)
 	call self.update_quickfix()
 
 	" Display
+	" TDOD: check if QF window is open first
+	"       Use getwininfo() perhaps.
 	if ! self.cnf.silent
 		" Filtering out /autoload/ this might finally not be so buggy.
 		if self.cnf.copen
@@ -831,7 +844,7 @@ fun! s:Vfix.run(...)
 			wincmd p
 		else
 			keepalt cw
-			wincmd p
+			" wincmd p
 		endif
 	endif
 
