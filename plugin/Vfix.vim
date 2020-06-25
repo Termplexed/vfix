@@ -122,6 +122,9 @@ let s:file_cache = { }
 " fn:   File to read
 fun! s:Vfix.file2buf(fn)
 	let buf = []
+	if a:fn == ''
+		return buf
+	endif
 	if has_key(s:file_cache, a:fn)
 		let buf = s:file_cache[a:fn]
 	else
@@ -141,7 +144,17 @@ endfun
 " line  : Offset in code to focus on
 " return: 5 lines of code. 2 before + the line + 2 after
 fun! s:Vfix.ctx_from_buf(buf, line)
-	return a:buf[(a:line < 2 ? 0 : a:line - 2) : (a:line + 2)]
+	let n = len(a:buf)
+	let ctx = a:buf[(a:line < 2 ? 0 : a:line - 2) : (a:line + 2)]
+	let i = a:line + 3
+	if i < n && ctx[-2] =~ '^\s*\\' && ctx[-1] =~ '^\s*\\'
+		while i < n && a:buf[i] =~ '^\s*\\'
+			let ctx +=[a:buf[i]]
+			let i += 1
+		endwhile
+		let ctx += a:buf[i : i + 2]
+	endif
+	return ctx
 endfun
 " }}}
 " F s:Vfix.resolve_ref(ref, type) abort               Resolve function name {{{1
