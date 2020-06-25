@@ -79,16 +79,21 @@ endfun
 fun! s:Vfix.filter_by_mark(mm)
 	if self.search_mark == '0'
 		" All
+		let mm = a:mm
 	elseif self.search_mark != ''
+		" Search for specified mark
 		let mm = matchstr(a:mm, '.*\zs;; VfixM \s*'
 				\ . self.search_mark . '.*')
 	elseif self.mark_counter > 0
+		" Use last mark
 		let mm = matchstr(a:mm, '.*\zs;; VfixM .*')
 		if mm == ''
 		" If messages have been cleared and there is new
 		" errors without sourcing
 			let mm = a:mm
 		endif
+	else
+		let mm = a:mm
 	endif
 	let self.search_mark = ''
 	return mm
