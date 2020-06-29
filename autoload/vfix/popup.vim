@@ -1,3 +1,7 @@
+if v:version < 802 && !has('nvim')
+    finish
+endif
+
 let s:cpo_bak = &cpo
 set cpo&vim
 
@@ -69,7 +73,10 @@ fun! s:pop_highlight(txt, ln, swp_taken)
 	else
 		let m = ''
 	endif
-	call clearmatches(s:pop.wid)
+	" nvim 0.4 does not take window id
+	if ! has('nvim') || has('nvim-0.5')
+		call clearmatches(s:pop.wid)
+	endif
 	if m != ''
 		" DUMP [a:ln.hi_start, m, a:ln.hi_end]
 		let s:pop_em1 = matchadd('Error',

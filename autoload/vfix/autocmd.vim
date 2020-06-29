@@ -29,7 +29,8 @@ endfun
 fun! vfix#autocmd#set(cnf)
 	augroup VfixAutocommands
 		autocmd!
-		if a:cnf.auto_run
+		" SourcePost added by patch 8.1.0729
+		if a:cnf.auto_run && exists('##SourcePost')
 			autocmd SourcePost *.vim call s:on_SourcePost()
 		endif
 		if a:cnf.mark_auto

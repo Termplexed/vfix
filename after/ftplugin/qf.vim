@@ -1,3 +1,7 @@
+if v:version < 802 && !has('nvim')
+    finish
+endif
+
 let s:cpo_bak = &cpo
 set cpo&vim
 
