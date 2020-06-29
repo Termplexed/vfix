@@ -22,7 +22,7 @@ fun! vfix#file#read(fn)
 			let buf = readfile(a:fn)
 			let s:file_cache[a:fn] = buf
 		catch
-			call vfix#msg#warn('Vfix: Unable to read ' . a:fn, 0)
+			call vfix#echo#warn('Vfix: Unable to read ' . a:fn, 0)
 			let buf = []
 		endtry
 	endif
