@@ -25,8 +25,9 @@ Can be a help to find where errors originate etc.
 
 * Popup
 * Autoload
-* [Added marks](https://github.com/Termplexed/vfix#newspapernews)
+* Added marks
 
+Read [*News*](https://github.com/Termplexed/vfix/tree/autoload#newspapernews) for more detail.
 
 ---
 
@@ -119,6 +120,8 @@ g:Vfix_filter_mark    1 " Only parse messages from last mark
 g:Vfix_auto_mark      1 " Add mark in :messages each time a script is sourced
 g:Vfix_hi_mark  Comment " Highlighting group to use for marks in messages
 
+g:Vfix_popup_map_key    'v' " Key mapping to show popup / preview
+
 
 g:Vfix_load_on_startup    0 " The boot() section of the code will be run first
                             " time :Vfix is called. Set this to 1 to boot()
@@ -133,6 +136,21 @@ g:Vfix_re_source_globals  0 " Mainly for hacking ***this*** script.
 
 
 ##  :newspaper:&nbsp;&nbsp;&nbsp;News
+
+**Popup preview**
+
+Preview a few lines of code around the offending line.
+
+When in Quickfix window press map-key for popup. Default `v`, press again to close.
+
+Moving up/ down (jk) in the Quickfix window autoload next.
+
+Set map-key to non-default by `g:Vfix_popup_map_key`
+
+**Autoload**
+
+Rewritten for `autoload`. It started out small and for private use. Public and
+also bigger code - better to have it in autoload.
 
 **Marks in `:messages` and new default values.**
 
@@ -181,7 +199,7 @@ but likely best suited as an addon. Is a bit complex and usually not worth it.
 - [x] Find a way to set a a *mark* in `:messages` if user reloads a script they
 are working on. Could likely use autocommand in combination with `:silent echom`
 This way one could ignore lost messages better.
-- [ ] As we read the files where errors originated and also get context - a few
+- [x] As we read the files where errors originated and also get context - a few
 lines before / after - one could try to implement a way to show this. Popup?
 For example a popup while navigating QuickFix list. Could be useful for when one
 do not want to open the file - or the file is open in another vim session.
