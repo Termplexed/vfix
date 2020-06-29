@@ -15,7 +15,11 @@ Can be a help to find where errors originate etc.
 
 ---
 
-[Latest: Added marks](https://github.com/Termplexed/vfix#newspapernews)
+<h3>Latest</h3>
+
+* [Autoload and Popup preview](https://github.com/Termplexed/vfix/tree/autoload)
+This is currently on a different branch; `autoload`
+* [Added marks](https://github.com/Termplexed/vfix#newspapernews)
 
 
 ---
