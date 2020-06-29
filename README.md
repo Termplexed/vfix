@@ -16,12 +16,16 @@ A crude and simple script for Vim to resolve some of the error `:messages` yield
 
 Can be a help to find where errors originate etc.
 
-* For Vim >= 8.1.0362
+* For Vim >= 8.1.0362 (Popup requires Vim 8.2)
 * For Nvim >= 0.4.0 (#a2e48b556b7537acd26353b6cc201410be7cf3dc)
 
 ---
 
-[Latest: Added marks](https://github.com/Termplexed/vfix#newspapernews)
+<h3>Latest</h3>
+
+* Popup
+* Autoload
+* [Added marks](https://github.com/Termplexed/vfix#newspapernews)
 
 
 ---
