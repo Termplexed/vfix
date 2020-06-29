@@ -10,6 +10,9 @@ fun! s:echo(hi, s, persistent)
 	endif
 	echohl None
 endfun
+fun! vfix#echo#error(s, persistent)
+	call s:echo('ErrorMsg', a:s, a:persistent)
+endfun
 fun! vfix#echo#warn(s, persistent)
 	call s:echo('WarningMsg', a:s, a:persistent)
 endfun

@@ -115,7 +115,7 @@ fun! vfix#options#arg_parse(cnf, n, opts)
 			call vfix#help#show()
 			let r = 1
 		else
-			call vfix#echo#warn("Unknown command '" . opt . "'", 0)
+			call vfix#echo#error("Unknown command '" . opt . "'", 0)
 			let r = 1
 			break
 		endif
