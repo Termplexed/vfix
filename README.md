@@ -1,9 +1,15 @@
 <h1 align="center">:Vfix</h1>
-
+<h2 align="center">~ v0.2.0 autoload + popup ~</h2>
 <p align="center">
   <img width="600"
        alt=":Vfix in action preview"
-       src="https://raw.githubusercontent.com/Termplexed/res/master/gif/Vfix.gif">
+       src="https://raw.githubusercontent.com/Termplexed/res/master/gif/Vfix.gif" />
+</p>
+<h3 align="center">With popup</h3>
+<p align="center">
+  <img width="561"
+       alt=":Vfix in action with popup preview"
+       src="https://raw.githubusercontent.com/Termplexed/res/master/img/vfix_popup.png" />
 </p>
 
 A crude and simple script for Vim to resolve some of the error `:messages` yielded when vim-scrips fail.
