@@ -1,5 +1,5 @@
 <h1 align="center">:Vfix</h1>
-<h3 align="center"><a href="https://github.com/Termplexed/vfix/tree/autoload">Go here for autoload + popup version</a></3>
+<h3 align="center"><a href="https://github.com/Termplexed/vfix/tree/autoload">Go here for autoload + popup version</a></h3>
 <p align="center">
   <img width="600"
        alt=":Vfix in action preview"
