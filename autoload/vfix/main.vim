@@ -29,7 +29,7 @@ fun! vfix#main#is_map_virgin()
 		return 0
 	endif
 endfun
-fun! vfix#main#boot()
+fun! vfix#main#boot() abort
 	call vfix#options#cnf_init(s:cnf)
 	if exists('s:cnf_bak')
 		call extend(s:cnf, s:cnf_bak)
@@ -47,9 +47,9 @@ fun! vfix#main#boot()
 	call vfix#messages#init(s:cnf)
 	call vfix#autocmd#set(s:cnf)
 endfun
-fun! vfix#main#run(...)
+fun! vfix#main#run(...) abort
 	if ! s:strapped
-		call self.boot()
+		call vfix#main#boot()
 	endif
 	if vfix#options#arg_parse(s:cnf, a:0, a:000)
 		return 1

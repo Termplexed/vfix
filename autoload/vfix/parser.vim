@@ -160,7 +160,7 @@ fun! s:resolve_msg(t) abort
 	let m = matchstr(a:t, 'function:\? \zs[0-9]\+$')
 	if m != ''
 		let res = s:resolve_fun(m, 'edict')
-		let m = substitute(a:t, m .'$', res.fun)
+		let m = substitute(a:t, m .'$', res.fun, '')
 	else
 		let m = a:t
 	endif
@@ -236,7 +236,7 @@ endfun
 " If this error is not part of a call stack and does not have a
 " reference as in ^Error detected while ..., we try to catch it
 " here and at least resolve numeric references.
-fun! s:check_eref(msg)
+fun! s:check_eref(msg) abort
 	let err_found = 1
 	let xm = matchlist(a:msg,
 		\ '^E' .
@@ -252,7 +252,7 @@ endfun
 " Check if current line from 'messages' is a *normal* Error detected
 " message. If so try to find if it is a dict error or other and call
 " appropriate functions to push it onto reflist.
-fun! s:check_detected(messages)
+fun! s:check_detected(messages) abort
 	let err_found = 1
 	let xm = matchlist(s:messages[s:ix],
 		\ "^Error detected while processing " .
