@@ -1,7 +1,7 @@
 <h1 align="center">:Vfix</h1>
 <h2 align="center">~ v0.2.0 autoload + popup ~</h2>
 <p align="center">
-  <img width="600"
+  <img width="532"
        alt=":Vfix in action preview"
        src="https://raw.githubusercontent.com/Termplexed/res/master/gif/Vfix.gif" />
 </p>
